@@ -15,6 +15,11 @@ const Index = () => {
   const [balance, setBalance] = useState(1500);
   const [isOpeningCase, setIsOpeningCase] = useState(false);
   const [openedItem, setOpenedItem] = useState<any>(null);
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [steamConnected, setSteamConnected] = useState(false);
+  const [casesOpened, setCasesOpened] = useState(0);
 
   const cases = [
     {
@@ -52,26 +57,115 @@ const Index = () => {
   ];
 
   const weapons = [
-    { name: "AK-47 Redline", rarity: "Legendary", chance: 0.5 },
-    { name: "AWP Dragon Lore", rarity: "Mythical", chance: 0.1 },
-    { name: "M4A4 Howl", rarity: "Legendary", chance: 0.3 },
-    { name: "Karambit Fade", rarity: "Mythical", chance: 0.05 },
-    { name: "Glock Water Elemental", rarity: "Rare", chance: 15 },
+    {
+      name: "AK-47 Redline",
+      rarity: "Legendary",
+      chance: 0.5,
+      price: 2500,
+      image: "/img/b1d22543-32df-42e7-a45f-523f76075968.jpg",
+      float: 0.15,
+      category: "Rifle",
+    },
+    {
+      name: "AWP Dragon Lore",
+      rarity: "Mythical",
+      chance: 0.1,
+      price: 15000,
+      image: "/img/471dde1c-6454-4899-bb32-43127605dc1c.jpg",
+      float: 0.08,
+      category: "Sniper",
+    },
+    {
+      name: "M4A4 Howl",
+      rarity: "Legendary",
+      chance: 0.3,
+      price: 8000,
+      image: "/img/b1d22543-32df-42e7-a45f-523f76075968.jpg",
+      float: 0.12,
+      category: "Rifle",
+    },
+    {
+      name: "Karambit Fade",
+      rarity: "Mythical",
+      chance: 0.05,
+      price: 25000,
+      image: "/img/5490ebc6-81a6-42f3-a217-98020fb9a073.jpg",
+      float: 0.01,
+      category: "Knife",
+    },
+    {
+      name: "Glock Water Elemental",
+      rarity: "Rare",
+      chance: 15,
+      price: 180,
+      image: "/img/b1d22543-32df-42e7-a45f-523f76075968.jpg",
+      float: 0.25,
+      category: "Pistol",
+    },
+    {
+      name: "USP-S Kill Confirmed",
+      rarity: "Legendary",
+      chance: 0.8,
+      price: 1200,
+      image: "/img/b1d22543-32df-42e7-a45f-523f76075968.jpg",
+      float: 0.18,
+      category: "Pistol",
+    },
   ];
+
+  const playSound = (soundType: string) => {
+    // Имитация звукового эффекта
+    const audio = new Audio();
+    if (soundType === "case-open") {
+      // Здесь будет реальный звук открытия кейса
+      console.log("🔊 Звук открытия кейса");
+    } else if (soundType === "rare-item") {
+      console.log("🔊 Звук редкого предмета");
+    }
+  };
 
   const openCase = (caseItem: any) => {
     if (balance < caseItem.price) return;
 
     setIsOpeningCase(true);
     setBalance(balance - caseItem.price);
+    setCasesOpened(casesOpened + 1);
+
+    playSound("case-open");
 
     setTimeout(() => {
-      const random = Math.random();
-      const selectedWeapon = weapons[Math.floor(random * weapons.length)];
-      setOpenedItem({
-        ...selectedWeapon,
-        case: caseItem.name,
-      });
+      const random = Math.random() * 100;
+      let selectedWeapon;
+
+      // Система рарности с реальными шансами
+      if (random < 0.05) {
+        selectedWeapon = weapons.find((w) => w.name === "Karambit Fade");
+      } else if (random < 0.1) {
+        selectedWeapon = weapons.find((w) => w.name === "AWP Dragon Lore");
+      } else if (random < 2) {
+        selectedWeapon = weapons.find((w) => w.rarity === "Legendary");
+      } else if (random < 15) {
+        selectedWeapon = weapons.find((w) => w.rarity === "Rare");
+      } else {
+        selectedWeapon = weapons[Math.floor(Math.random() * weapons.length)];
+      }
+
+      if (selectedWeapon) {
+        const newItem = {
+          ...selectedWeapon,
+          case: caseItem.name,
+          id: Date.now(),
+          openedAt: new Date(),
+        };
+
+        setOpenedItem(newItem);
+        setInventory([...inventory, newItem]);
+
+        if (selectedWeapon.rarity === "Mythical") {
+          playSound("rare-item");
+        }
+      }
+
       setIsOpeningCase(false);
     }, 2000);
   };
@@ -87,6 +181,30 @@ const Index = () => {
       default:
         return "bg-gray-500";
     }
+  };
+
+  const handleDeposit = () => {
+    const amount = parseFloat(depositAmount);
+    if (amount > 0) {
+      setBalance(balance + amount);
+      setDepositAmount("");
+      setShowDepositModal(false);
+    }
+  };
+
+  const connectSteam = () => {
+    // Заглушка для Steam API
+    setSteamConnected(true);
+    alert(
+      "Steam API интеграция в разработке! Скоро будет доступна синхронизация с вашим инвентарем.",
+    );
+  };
+
+  const sellItem = (item: any) => {
+    const sellPrice = Math.floor(item.price * 0.8); // 80% от цены
+    setBalance(balance + sellPrice);
+    setInventory(inventory.filter((i) => i.id !== item.id));
+    setOpenedItem(null);
   };
 
   return (
@@ -132,8 +250,28 @@ const Index = () => {
                   {balance.toLocaleString()}
                 </span>
               </div>
-              <Button className="bg-primary hover:bg-primary/90 glow-orange font-orbitron">
+              <div className="flex items-center space-x-2 bg-muted/20 px-3 py-2 rounded-lg">
+                <Icon
+                  name="Package"
+                  size={16}
+                  className="text-muted-foreground"
+                />
+                <span className="text-sm text-muted-foreground">
+                  Открыто: {casesOpened}
+                </span>
+              </div>
+              <Button
+                className="bg-primary hover:bg-primary/90 glow-orange font-orbitron"
+                onClick={() => setShowDepositModal(true)}
+              >
                 Пополнить
+              </Button>
+              <Button
+                variant="outline"
+                className="font-orbitron"
+                onClick={connectSteam}
+              >
+                {steamConnected ? "✅ Steam" : "🔗 Steam"}
               </Button>
             </div>
           </div>
@@ -159,6 +297,71 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="cases" className="space-y-8">
+            {/* Deposit Modal */}
+            {showDepositModal && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <Card className="w-96">
+                  <CardHeader>
+                    <CardTitle className="font-orbitron text-center">
+                      Пополнить баланс
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        Сумма пополнения
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 bg-muted rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Введите сумму..."
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDepositAmount("100")}
+                      >
+                        100
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDepositAmount("500")}
+                      >
+                        500
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDepositAmount("1000")}
+                      >
+                        1000
+                      </Button>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setShowDepositModal(false)}
+                      >
+                        Отмена
+                      </Button>
+                      <Button
+                        className="flex-1 bg-primary hover:bg-primary/90"
+                        onClick={handleDeposit}
+                      >
+                        Пополнить
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Opening Animation */}
             {isOpeningCase && (
               <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -174,9 +377,13 @@ const Index = () => {
                       {weapons.map((weapon, index) => (
                         <div
                           key={index}
-                          className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center"
+                          className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex items-center justify-center"
                         >
-                          <Icon name="Zap" size={24} className="text-primary" />
+                          <img
+                            src={weapon.image}
+                            alt={weapon.name}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                       ))}
                     </div>
@@ -199,16 +406,35 @@ const Index = () => {
                   </CardHeader>
                   <CardContent className="text-center space-y-4">
                     <div
-                      className={`w-32 h-32 mx-auto rounded-lg ${getRarityColor(openedItem.rarity)} flex items-center justify-center`}
+                      className={`w-32 h-32 mx-auto rounded-lg ${getRarityColor(openedItem.rarity)} p-2 flex items-center justify-center overflow-hidden`}
                     >
-                      <Icon name="Zap" size={48} className="text-white" />
+                      <img
+                        src={openedItem.image}
+                        alt={openedItem.name}
+                        className="w-full h-full object-cover rounded"
+                      />
                     </div>
                     <h3 className="font-orbitron text-xl text-foreground">
                       {openedItem.name}
                     </h3>
-                    <Badge className={getRarityColor(openedItem.rarity)}>
-                      {openedItem.rarity}
-                    </Badge>
+                    <div className="flex justify-center space-x-2">
+                      <Badge className={getRarityColor(openedItem.rarity)}>
+                        {openedItem.rarity}
+                      </Badge>
+                      <Badge variant="outline">{openedItem.category}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-center">
+                        <p className="text-muted-foreground">Цена</p>
+                        <p className="font-orbitron font-bold text-secondary">
+                          {openedItem.price.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-muted-foreground">Float</p>
+                        <p className="font-orbitron">{openedItem.float}</p>
+                      </div>
+                    </div>
                     <div className="flex space-x-2">
                       <Button
                         className="flex-1 bg-primary hover:bg-primary/90"
@@ -219,9 +445,9 @@ const Index = () => {
                       <Button
                         variant="outline"
                         className="flex-1"
-                        onClick={() => setOpenedItem(null)}
+                        onClick={() => sellItem(openedItem)}
                       >
-                        Продать
+                        Продать за {Math.floor(openedItem.price * 0.8)}
                       </Button>
                     </div>
                   </CardContent>
@@ -299,6 +525,28 @@ const Index = () => {
               <p className="text-muted-foreground mb-8">
                 Улучшай свои скины с шансом получить предмет дороже
               </p>
+              {inventory.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  {inventory.slice(0, 3).map((item) => (
+                    <Card key={item.id} className="bg-card/50">
+                      <CardContent className="p-4 text-center">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-16 h-16 mx-auto mb-2 rounded"
+                        />
+                        <p className="text-sm font-orbitron">{item.name}</p>
+                        <Badge
+                          className={getRarityColor(item.rarity)}
+                          size="sm"
+                        >
+                          {item.rarity}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
               <Button
                 size="lg"
                 className="bg-primary hover:bg-primary/90 glow-orange font-orbitron"
